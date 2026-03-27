@@ -1,0 +1,13 @@
+# Скопируй этот файл в local.properties и заполни значения.
+# local.properties НЕ коммитится в git.
+
+# Huawei AppGallery Connect → App Information
+HUAWEI_APP_ID=ваш_app_id
+HUAWEI_APP_SECRET=ваш_app_secret
+
+# Google Cloud Console → OAuth 2.0 Client ID (Android)
+GOOGLE_CLIENT_ID=ваш_client_id
+GOOGLE_CLIENT_SECRET=ваш_client_secret
+
+# ID папки в Google Drive для загрузки данных здоровья
+GOOGLE_DRIVE_FOLDER_ID=id_папки

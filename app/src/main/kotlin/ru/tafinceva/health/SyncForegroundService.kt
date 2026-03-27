@@ -4,6 +4,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
@@ -24,7 +26,12 @@ class SyncForegroundService : Service() {
             .setContentText("Синхронизация…")
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .build()
-        startForeground(SyncWorker.NOTIF_ID, notification)
+        // Баг #2: Android 14+ требует явного типа в startForeground(), иначе краш.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(SyncWorker.NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            startForeground(SyncWorker.NOTIF_ID, notification)
+        }
     }
 
     private fun createChannel() {

@@ -3,6 +3,7 @@ package ru.tafinceva.health
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import ru.tafinceva.health.BuildConfig
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 
@@ -50,7 +51,10 @@ interface HuaweiHealthApi {
 object HuaweiApiFactory {
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        // Баг #1: Level.BODY сливает токены в Logcat в production-сборке.
+        // Используем BODY только в debug, в release — NONE.
+        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                else HttpLoggingInterceptor.Level.NONE
     }
 
     private val httpClient = OkHttpClient.Builder()
