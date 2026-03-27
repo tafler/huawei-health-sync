@@ -3,6 +3,7 @@ package ru.tafinceva.health
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.math.roundToInt
+import ru.tafinceva.health.BuildConfig
 
 /**
  * Fetches and parses Huawei Health Kit data for a given date.
@@ -12,9 +13,12 @@ import kotlin.math.roundToInt
 class HuaweiRepository(private val tokenManager: TokenManager) {
 
     companion object {
-        const val APP_ID     = "6917601175022051786"
-        // TODO: replace with your actual Huawei App Secret from AppGallery Connect
-        const val APP_SECRET = "YOUR_HUAWEI_APP_SECRET"
+        // Баг #3: секреты вынесены из кода в BuildConfig (читается из local.properties).
+        // Добавь в local.properties:
+        //   HUAWEI_APP_ID=ваш_app_id
+        //   HUAWEI_APP_SECRET=ваш_app_secret
+        val APP_ID     get() = BuildConfig.HUAWEI_APP_ID
+        val APP_SECRET get() = BuildConfig.HUAWEI_APP_SECRET
         const val REDIRECT_URI = "https://localhost"
 
         private const val TYPE_STEPS      = "com.huawei.continuous.steps.total"

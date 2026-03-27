@@ -1,6 +1,14 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+}
+
+// Баг #3: читаем секреты из local.properties (не коммитится в git)
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
@@ -15,6 +23,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Прокидываем секреты в BuildConfig
+        buildConfigField("String", "HUAWEI_APP_ID",          "\"${localProps["HUAWEI_APP_ID"] ?: ""}\"")
+        buildConfigField("String", "HUAWEI_APP_SECRET",       "\"${localProps["HUAWEI_APP_SECRET"] ?: ""}\"")
+        buildConfigField("String", "GOOGLE_CLIENT_ID",        "\"${localProps["GOOGLE_CLIENT_ID"] ?: ""}\"")
+        buildConfigField("String", "GOOGLE_CLIENT_SECRET",    "\"${localProps["GOOGLE_CLIENT_SECRET"] ?: ""}\"")
+        buildConfigField("String", "GOOGLE_DRIVE_FOLDER_ID",  "\"${localProps["GOOGLE_DRIVE_FOLDER_ID"] ?: ""}\"")
     }
 
     buildTypes {
@@ -38,6 +53,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

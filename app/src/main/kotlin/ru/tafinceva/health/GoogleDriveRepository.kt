@@ -2,6 +2,7 @@ package ru.tafinceva.health
 
 import com.google.gson.Gson
 import okhttp3.MediaType.Companion.toMediaType
+import ru.tafinceva.health.BuildConfig
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,10 +20,14 @@ import java.io.IOException
 class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     companion object {
-        // TODO: replace with your Google OAuth client secret from Google Cloud Console
-        const val GOOGLE_CLIENT_ID     = "179608551541-scn6ls5cnsobm7l0gsaidsee18brinlb.apps.googleusercontent.com"
-        const val GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
-        const val DRIVE_FOLDER_ID      = "1oGxmtsrFKcG-2izXelGlQ5rZ_wNKyGgx"
+        // Баг #3: секреты вынесены из кода в BuildConfig (читается из local.properties).
+        // Добавь в local.properties:
+        //   GOOGLE_CLIENT_ID=ваш_client_id
+        //   GOOGLE_CLIENT_SECRET=ваш_client_secret
+        //   GOOGLE_DRIVE_FOLDER_ID=id_папки_в_drive
+        val GOOGLE_CLIENT_ID     get() = BuildConfig.GOOGLE_CLIENT_ID
+        val GOOGLE_CLIENT_SECRET get() = BuildConfig.GOOGLE_CLIENT_SECRET
+        val DRIVE_FOLDER_ID      get() = BuildConfig.GOOGLE_DRIVE_FOLDER_ID
 
         private const val TOKEN_URL      = "https://oauth2.googleapis.com/token"
         private const val FILES_URL      = "https://www.googleapis.com/drive/v3/files"
@@ -35,7 +40,9 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            // Баг #1: Level.BODY сливает токены в Logcat в production-сборке.
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
         })
         .build()
 
@@ -71,15 +78,15 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .post(body.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val responseBody = response.body?.string()
-            ?: throw IOException("Empty response from Google token endpoint")
-
-        if (!response.isSuccessful) {
-            throw IOException("Token refresh failed (${response.code}): $responseBody")
+        // Баг #4: ResponseBody закрывается через use{} — предотвращает утечку соединений.
+        httpClient.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string()
+                ?: throw IOException("Empty response from Google token endpoint")
+            if (!response.isSuccessful) {
+                throw IOException("Token refresh failed (${response.code}): $responseBody")
+            }
+            return JSONObject(responseBody).getString("access_token")
         }
-
-        return JSONObject(responseBody).getString("access_token")
     }
 
     // ── Drive helpers ─────────────────────────────────────────
@@ -94,12 +101,13 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .header("Authorization", "Bearer $accessToken")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        val body = response.body?.string() ?: return null
-        if (!response.isSuccessful) return null
-
-        val parsed = gson.fromJson(body, DriveFileListResponse::class.java)
-        return parsed.files?.firstOrNull()?.id
+        // Баг #4: use{} гарантирует закрытие ResponseBody
+        httpClient.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: return null
+            if (!response.isSuccessful) return null
+            val parsed = gson.fromJson(body, DriveFileListResponse::class.java)
+            return parsed.files?.firstOrNull()?.id
+        }
     }
 
     private fun createFile(accessToken: String, fileName: String, content: String) {
@@ -112,9 +120,11 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .header("Authorization", "Bearer $accessToken")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw IOException("Drive create failed (${response.code}): ${response.body?.string()}")
+        // Баг #4: use{} гарантирует закрытие ResponseBody
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Drive create failed (${response.code}): ${response.body?.string()}")
+            }
         }
     }
 
@@ -128,9 +138,11 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .header("Authorization", "Bearer $accessToken")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw IOException("Drive update failed (${response.code}): ${response.body?.string()}")
+        // Баг #4: use{} гарантирует закрытие ResponseBody
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Drive update failed (${response.code}): ${response.body?.string()}")
+            }
         }
     }
 
