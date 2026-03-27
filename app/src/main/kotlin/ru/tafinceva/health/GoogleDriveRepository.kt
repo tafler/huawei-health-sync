@@ -15,16 +15,16 @@ import java.io.IOException
  * Uploads a daily health JSON snapshot to a specific Google Drive folder.
  *
  * Uses the Google Drive REST v3 API directly (no SDK).
- * Auth: refreshes a stored refresh token to obtain a short-lived access token.
+ * Auth: exchanges an OAuth authorisation code for tokens on first run,
+ *       then refreshes the stored refresh token to obtain short-lived access tokens.
  */
 class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     companion object {
-        // Баг #3: секреты вынесены из кода в BuildConfig (читается из local.properties).
-        // Добавь в local.properties:
-        //   GOOGLE_CLIENT_ID=ваш_client_id
-        //   GOOGLE_CLIENT_SECRET=ваш_client_secret
-        //   GOOGLE_DRIVE_FOLDER_ID=id_папки_в_drive
+        // Секреты читаются из local.properties через BuildConfig:
+        //   GOOGLE_CLIENT_ID=...
+        //   GOOGLE_CLIENT_SECRET=...
+        //   GOOGLE_DRIVE_FOLDER_ID=...
         val GOOGLE_CLIENT_ID     get() = BuildConfig.GOOGLE_CLIENT_ID
         val GOOGLE_CLIENT_SECRET get() = BuildConfig.GOOGLE_CLIENT_SECRET
         val DRIVE_FOLDER_ID      get() = BuildConfig.GOOGLE_DRIVE_FOLDER_ID
@@ -34,17 +34,51 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
         private const val UPLOAD_URL     = "https://www.googleapis.com/upload/drive/v3/files"
         private const val JSON_MIME      = "application/json"
         private const val BOUNDARY       = "health_sync_boundary"
+        private const val REDIRECT_URI   = "https://localhost"
     }
 
     private val gson = Gson()
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().apply {
-            // Баг #1: Level.BODY сливает токены в Logcat в production-сборке.
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
                     else HttpLoggingInterceptor.Level.NONE
         })
         .build()
+
+    // ── OAuth: code exchange ──────────────────────────────────
+
+    /**
+     * Exchange a one-time authorisation [code] (from Google consent screen)
+     * for access + refresh tokens. Saves the refresh token via [TokenManager].
+     */
+    fun exchangeCode(code: String) {
+        val body = buildString {
+            append("grant_type=authorization_code")
+            append("&code=").append(code)
+            append("&client_id=").append(GOOGLE_CLIENT_ID)
+            append("&client_secret=").append(GOOGLE_CLIENT_SECRET)
+            append("&redirect_uri=").append(REDIRECT_URI)
+        }
+
+        val request = Request.Builder()
+            .url(TOKEN_URL)
+            .post(body.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
+            .build()
+
+        httpClient.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string()
+                ?: throw IOException("Empty response from Google token endpoint")
+            if (!response.isSuccessful) {
+                throw IOException("Google code exchange failed (${response.code}): $responseBody")
+            }
+            val json = JSONObject(responseBody)
+            val refreshToken = json.optString("refresh_token")
+                .takeIf { it.isNotEmpty() }
+                ?: throw IOException("Google did not return a refresh_token (prompt=consent required)")
+            tokenManager.googleRefreshToken = refreshToken
+        }
+    }
 
     // ── Public API ────────────────────────────────────────────
 
@@ -66,7 +100,7 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     private fun refreshAccessToken(): String {
         val refreshToken = tokenManager.googleRefreshToken
-            ?: error("Google refresh token not set")
+            ?: error("Google refresh token not set — please authorise via the app")
 
         val body = "grant_type=refresh_token" +
                 "&client_id=${GOOGLE_CLIENT_ID}" +
@@ -78,7 +112,6 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .post(body.toRequestBody("application/x-www-form-urlencoded".toMediaType()))
             .build()
 
-        // Баг #4: ResponseBody закрывается через use{} — предотвращает утечку соединений.
         httpClient.newCall(request).execute().use { response ->
             val responseBody = response.body?.string()
                 ?: throw IOException("Empty response from Google token endpoint")
@@ -101,7 +134,6 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .header("Authorization", "Bearer $accessToken")
             .build()
 
-        // Баг #4: use{} гарантирует закрытие ResponseBody
         httpClient.newCall(request).execute().use { response ->
             val body = response.body?.string() ?: return null
             if (!response.isSuccessful) return null
@@ -120,7 +152,6 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .header("Authorization", "Bearer $accessToken")
             .build()
 
-        // Баг #4: use{} гарантирует закрытие ResponseBody
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IOException("Drive create failed (${response.code}): ${response.body?.string()}")
@@ -138,7 +169,6 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
             .header("Authorization", "Bearer $accessToken")
             .build()
 
-        // Баг #4: use{} гарантирует закрытие ResponseBody
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IOException("Drive update failed (${response.code}): ${response.body?.string()}")
@@ -146,11 +176,6 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
         }
     }
 
-    /**
-     * Builds a multipart/related body used by Drive's multipart upload:
-     *   Part 1 — JSON metadata
-     *   Part 2 — file content
-     */
     private fun buildMultipartBody(metadata: String, content: String): okhttp3.RequestBody {
         val rawBody = buildString {
             append("--$BOUNDARY\r\n")
