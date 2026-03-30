@@ -11,33 +11,31 @@ import androidx.appcompat.app.AppCompatActivity
 import ru.tafinceva.health.databinding.ActivityAuthWebviewBinding
 
 /**
- * Google OAuth 2.0 authorisation flow inside a WebView.
+ * Displays the Google OAuth 2.0 authorization page in a WebView.
  *
- * Opens the Google consent screen. When Google redirects to
- * https://localhost?code=..., intercepts the URL, extracts the
- * authorisation code and broadcasts it back to MainActivity.
+ * NOTE: Google may block authentication in WebViews for security reasons.
+ * For a production app, using Custom Tabs or Google Identity Services is recommended.
+ * This implementation follows the pattern used for Huawei authentication in this project.
  */
 class GoogleAuthActivity : AppCompatActivity() {
 
     companion object {
         const val ACTION_GOOGLE_AUTH_CODE = "ru.tafinceva.health.ACTION_GOOGLE_AUTH_CODE"
-        const val EXTRA_CODE              = "auth_code"
-        const val EXTRA_ERROR             = "auth_error"
+        const val EXTRA_CODE             = "auth_code"
+        const val EXTRA_ERROR            = "auth_error"
 
         private const val REDIRECT_URI = "https://localhost"
 
         fun buildAuthUrl(): String {
-            val scope = listOf(
-                "https://www.googleapis.com/auth/drive.file"
-            ).joinToString(" ")
+            val scope = "https://www.googleapis.com/auth/drive.file"
 
             return Uri.Builder()
                 .scheme("https")
                 .authority("accounts.google.com")
                 .path("/o/oauth2/v2/auth")
-                .appendQueryParameter("response_type", "code")
                 .appendQueryParameter("client_id", GoogleDriveRepository.GOOGLE_CLIENT_ID)
                 .appendQueryParameter("redirect_uri", REDIRECT_URI)
+                .appendQueryParameter("response_type", "code")
                 .appendQueryParameter("scope", scope)
                 .appendQueryParameter("access_type", "offline")
                 .appendQueryParameter("prompt", "consent")
@@ -56,13 +54,18 @@ class GoogleAuthActivity : AppCompatActivity() {
 
         with(binding.webView) {
             settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
+            settings.domStorageEnabled  = true
+            // Some versions of Google OAuth block standard WebView User Agents.
+            // If authentication fails, you might need to set a custom User Agent here.
             webViewClient = GoogleOAuthClient()
             loadUrl(buildAuthUrl())
         }
     }
 
+    // ── WebViewClient ─────────────────────────────────────────
+
     inner class GoogleOAuthClient : WebViewClient() {
+
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             val url = request.url.toString()
             if (url.startsWith(REDIRECT_URI)) {
@@ -72,6 +75,7 @@ class GoogleAuthActivity : AppCompatActivity() {
             return false
         }
 
+        /** Legacy callback for API < 24. */
         @Deprecated("Deprecated in Java")
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
             if (url.startsWith(REDIRECT_URI)) {
@@ -81,6 +85,8 @@ class GoogleAuthActivity : AppCompatActivity() {
             return false
         }
     }
+
+    // ── Redirect handling ─────────────────────────────────────
 
     private fun handleRedirect(uri: Uri) {
         val code  = uri.getQueryParameter("code")

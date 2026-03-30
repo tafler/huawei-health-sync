@@ -22,12 +22,12 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     companion object {
         // Секреты читаются из local.properties через BuildConfig:
-        //   GOOGLE_CLIENT_ID=...
-        //   GOOGLE_CLIENT_SECRET=...
-        //   GOOGLE_DRIVE_FOLDER_ID=...
         val GOOGLE_CLIENT_ID     get() = BuildConfig.GOOGLE_CLIENT_ID
         val GOOGLE_CLIENT_SECRET get() = BuildConfig.GOOGLE_CLIENT_SECRET
-        val DRIVE_FOLDER_ID      get() = BuildConfig.GOOGLE_DRIVE_FOLDER_ID
+        
+        // DRIVE_FOLDER_ID теперь берется из tokenManager динамически.
+        // Оставляем это здесь для обратной совместимости или как fallback, 
+        // но основная логика теперь в методах.
 
         private const val TOKEN_URL      = "https://oauth2.googleapis.com/token"
         private const val FILES_URL      = "https://www.googleapis.com/drive/v3/files"
@@ -84,15 +84,18 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     /** Serialize [data] and upload/update the file in Drive. */
     fun uploadHealthData(data: HealthData) {
+        val folderId = tokenManager.googleDriveFolderId
+            ?: error("Google Drive Folder ID not set")
+            
         val accessToken = refreshAccessToken()
         val fileName    = "health-${data.date}.json"
         val content     = gson.toJson(data)
 
-        val existingId = findFile(accessToken, fileName)
+        val existingId = findFile(accessToken, fileName, folderId)
         if (existingId != null) {
             updateFile(accessToken, existingId, content)
         } else {
-            createFile(accessToken, fileName, content)
+            createFile(accessToken, fileName, content, folderId)
         }
     }
 
@@ -124,8 +127,8 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
 
     // ── Drive helpers ─────────────────────────────────────────
 
-    private fun findFile(accessToken: String, fileName: String): String? {
-        val query = "name='$fileName' and '${DRIVE_FOLDER_ID}' in parents and trashed=false"
+    private fun findFile(accessToken: String, fileName: String, folderId: String): String? {
+        val query = "name='$fileName' and '${folderId}' in parents and trashed=false"
         val url   = "$FILES_URL?q=${query.urlEncode()}&fields=files(id,name)"
 
         val request = Request.Builder()
@@ -142,8 +145,8 @@ class GoogleDriveRepository(private val tokenManager: TokenManager) {
         }
     }
 
-    private fun createFile(accessToken: String, fileName: String, content: String) {
-        val metadata = """{"name":"$fileName","parents":["$DRIVE_FOLDER_ID"],"mimeType":"$JSON_MIME"}"""
+    private fun createFile(accessToken: String, fileName: String, content: String, folderId: String) {
+        val metadata = """{"name":"$fileName","parents":["$folderId"],"mimeType":"$JSON_MIME"}"""
         val requestBody = buildMultipartBody(metadata, content)
 
         val request = Request.Builder()

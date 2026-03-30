@@ -10,7 +10,6 @@
         android:layout_height="wrap_content"
         android:padding="24dp">
 
-        <!-- Title -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="0dp"
@@ -18,44 +17,73 @@
             android:text="Huawei Health Extractor"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Headline5"
             android:textColor="@color/black"
-            android:layout_marginBottom="32dp"
+            android:layout_marginBottom="24dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- ── Section 1: Huawei ────────────────────────────── -->
+        <!-- ── Configuration ────────────────────────────────── -->
 
-        <TextView
-            android:id="@+id/tvSectionHuawei"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilHuaweiId"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="1. Huawei авторизация"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+            android:hint="Huawei App ID"
             android:layout_marginBottom="8dp"
             app:layout_constraintTop_toBottomOf="@id/tvTitle"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etHuaweiId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textNoSuggestions" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilGoogleId"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Google Client ID"
+            android:layout_marginBottom="8dp"
+            app:layout_constraintTop_toBottomOf="@id/tilHuaweiId"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etGoogleId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textNoSuggestions" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilFolderId"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Google Drive Folder ID"
+            android:layout_marginBottom="24dp"
+            app:layout_constraintTop_toBottomOf="@id/tilGoogleId"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFolderId"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textNoSuggestions" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ── Auth Buttons ─────────────────────────────────── -->
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHuaweiLogin"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Войти через Huawei"
-            android:layout_marginBottom="24dp"
-            app:layout_constraintTop_toBottomOf="@id/tvSectionHuawei"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- ── Section 2: Google ────────────────────────────── -->
-
-        <TextView
-            android:id="@+id/tvSectionGoogle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="2. Google Drive авторизация"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
-            android:layout_marginBottom="8dp"
-            app:layout_constraintTop_toBottomOf="@id/btnHuaweiLogin"
+            android:layout_marginBottom="12dp"
+            app:layout_constraintTop_toBottomOf="@id/tilFolderId"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
@@ -65,12 +93,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Войти через Google"
-            android:layout_marginBottom="32dp"
-            app:layout_constraintTop_toBottomOf="@id/tvSectionGoogle"
+            android:layout_marginBottom="24dp"
+            app:layout_constraintTop_toBottomOf="@id/btnHuaweiLogin"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- ── Section 3: Sync ──────────────────────────────── -->
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSyncNow"
@@ -92,7 +118,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- ── Status labels ───────────────────────────────── -->
+        <!-- ── Status ───────────────────────────────────────── -->
 
         <TextView
             android:id="@+id/tvStatus"

@@ -24,6 +24,14 @@ class TokenManager(context: Context) {
 
     // ── Huawei ──────────────────────────────────────────────
 
+    var huaweiAppId: String?
+        get() = prefs.getString(KEY_HUAWEI_APP_ID, null) ?: BuildConfig.HUAWEI_APP_ID.takeIf { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(KEY_HUAWEI_APP_ID, v).apply()
+
+    var huaweiAppSecret: String?
+        get() = prefs.getString(KEY_HUAWEI_APP_SECRET, null) ?: BuildConfig.HUAWEI_APP_SECRET.takeIf { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(KEY_HUAWEI_APP_SECRET, v).apply()
+
     var huaweiAccessToken: String?
         get() = prefs.getString(KEY_HUAWEI_ACCESS, null)
         set(v) = prefs.edit().putString(KEY_HUAWEI_ACCESS, v).apply()
@@ -56,22 +64,45 @@ class TokenManager(context: Context) {
 
     // ── Google ───────────────────────────────────────────────
 
+    var googleClientId: String?
+        get() = prefs.getString(KEY_GOOGLE_CLIENT_ID, null) ?: BuildConfig.GOOGLE_CLIENT_ID.takeIf { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(KEY_GOOGLE_CLIENT_ID, v).apply()
+
+    var googleClientSecret: String?
+        get() = prefs.getString(KEY_GOOGLE_CLIENT_SECRET, null) ?: BuildConfig.GOOGLE_CLIENT_SECRET.takeIf { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(KEY_GOOGLE_CLIENT_SECRET, v).apply()
+
     var googleRefreshToken: String?
         get() = prefs.getString(KEY_GOOGLE_REFRESH, null)
         set(v) = prefs.edit().putString(KEY_GOOGLE_REFRESH, v).apply()
+
+    var googleDriveFolderId: String?
+        get() = prefs.getString(KEY_GOOGLE_FOLDER_ID, null) ?: BuildConfig.GOOGLE_DRIVE_FOLDER_ID.takeIf { it.isNotEmpty() }
+        set(v) = prefs.edit().putString(KEY_GOOGLE_FOLDER_ID, v).apply()
 
     var lastSyncTime: Long
         get() = prefs.getLong(KEY_LAST_SYNC, 0L)
         set(v) = prefs.edit().putLong(KEY_LAST_SYNC, v).apply()
 
     val isConfigured: Boolean
-        get() = !huaweiRefreshToken.isNullOrEmpty() && !googleRefreshToken.isNullOrEmpty()
+        get() = !huaweiRefreshToken.isNullOrEmpty() && 
+                !googleRefreshToken.isNullOrEmpty() && 
+                !googleDriveFolderId.isNullOrEmpty() &&
+                !huaweiAppId.isNullOrEmpty() &&
+                !googleClientId.isNullOrEmpty()
 
     companion object {
-        private const val KEY_HUAWEI_ACCESS  = "huawei_access_token"
-        private const val KEY_HUAWEI_REFRESH = "huawei_refresh_token"
-        private const val KEY_HUAWEI_EXPIRY  = "huawei_token_expiry"
-        private const val KEY_GOOGLE_REFRESH = "google_refresh_token"
-        private const val KEY_LAST_SYNC      = "last_sync_time"
+        private const val KEY_HUAWEI_APP_ID     = "huawei_app_id"
+        private const val KEY_HUAWEI_APP_SECRET = "huawei_app_secret"
+        private const val KEY_HUAWEI_ACCESS     = "huawei_access_token"
+        private const val KEY_HUAWEI_REFRESH    = "huawei_refresh_token"
+        private const val KEY_HUAWEI_EXPIRY     = "huawei_token_expiry"
+        
+        private const val KEY_GOOGLE_CLIENT_ID     = "google_client_id"
+        private const val KEY_GOOGLE_CLIENT_SECRET = "google_client_secret"
+        private const val KEY_GOOGLE_REFRESH       = "google_refresh_token"
+        private const val KEY_GOOGLE_FOLDER_ID     = "google_folder_id"
+        
+        private const val KEY_LAST_SYNC            = "last_sync_time"
     }
 }
