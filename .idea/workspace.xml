@@ -9,25 +9,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="85412435-3ade-46e9-a5bb-10a7d480d661" name="Changes" comment="chore: add Android Studio project configuration files&#10;&#10;- Add `.idea/AndroidProjectSystem.xml` to specify the Gradle project system&#10;- Add `.idea/gradle.xml` with project and module settings&#10;- Add `.idea/vcs.xml` for Git mapping&#10;- Add `.idea/misc.xml` and `.idea/markdown.xml` for IDE settings&#10;- Add `.idea/caches/deviceStreaming.xml` with a comprehensive list of persistent device selections for Firebase Device Streaming (Sony, Samsung, Pixel, etc.)">
-      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/deviceManager.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/migrations.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/runConfigurations.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/studiobot.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/GoogleAuthActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/GoogleAuthActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/GoogleDriveRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/GoogleDriveRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/MainActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/TokenManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/kotlin/ru/tafinceva/health/TokenManager.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/layout/activity_main.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/local.properties.example" beforeDir="false" afterPath="$PROJECT_DIR$/local.properties.example" afterDir="false" />
-    </list>
+    <list default="true" id="85412435-3ade-46e9-a5bb-10a7d480d661" name="Changes" comment="feat: allow dynamic configuration of Huawei and Google IDs in UI&#10;&#10;- Add input fields for Huawei App ID, Google Client ID, and Google Drive Folder ID to `activity_main.xml`&#10;- Update `TokenManager` to persist and retrieve these IDs from SharedPreferences, using `BuildConfig` values as fallbacks&#10;- Update `MainActivity` to handle user input for these IDs and validate them before initiating OAuth flows&#10;- Modify `GoogleDriveRepository` to use the dynamic `googleDriveFolderId` from `TokenManager` instead of a static constant&#10;- Update `GoogleAuthActivity` with better comments regarding WebView limitations and minor UI/parameter adjustments&#10;- Adjust Android project configuration files and update `AndroidManifest.xml` to use `@drawable/ic_launcher`&#10;- Update `local.properties.example` with a sample Huawei App ID" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -270,7 +252,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774627778671</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="feat: allow dynamic configuration of Huawei and Google IDs in UI&#10;&#10;- Add input fields for Huawei App ID, Google Client ID, and Google Drive Folder ID to `activity_main.xml`&#10;- Update `TokenManager` to persist and retrieve these IDs from SharedPreferences, using `BuildConfig` values as fallbacks&#10;- Update `MainActivity` to handle user input for these IDs and validate them before initiating OAuth flows&#10;- Modify `GoogleDriveRepository` to use the dynamic `googleDriveFolderId` from `TokenManager` instead of a static constant&#10;- Update `GoogleAuthActivity` with better comments regarding WebView limitations and minor UI/parameter adjustments&#10;- Adjust Android project configuration files and update `AndroidManifest.xml` to use `@drawable/ic_launcher`&#10;- Update `local.properties.example` with a sample Huawei App ID">
+      <option name="closed" value="true" />
+      <created>1774854384944</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1774854384944</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -286,19 +276,20 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="chore: add Android Studio project configuration files&#10;&#10;- Add `.idea/AndroidProjectSystem.xml` to specify the Gradle project system&#10;- Add `.idea/gradle.xml` with project and module settings&#10;- Add `.idea/vcs.xml` for Git mapping&#10;- Add `.idea/misc.xml` and `.idea/markdown.xml` for IDE settings&#10;- Add `.idea/caches/deviceStreaming.xml` with a comprehensive list of persistent device selections for Firebase Device Streaming (Sony, Samsung, Pixel, etc.)" />
-    <option name="LAST_COMMIT_MESSAGE" value="chore: add Android Studio project configuration files&#10;&#10;- Add `.idea/AndroidProjectSystem.xml` to specify the Gradle project system&#10;- Add `.idea/gradle.xml` with project and module settings&#10;- Add `.idea/vcs.xml` for Git mapping&#10;- Add `.idea/misc.xml` and `.idea/markdown.xml` for IDE settings&#10;- Add `.idea/caches/deviceStreaming.xml` with a comprehensive list of persistent device selections for Firebase Device Streaming (Sony, Samsung, Pixel, etc.)" />
+    <MESSAGE value="feat: allow dynamic configuration of Huawei and Google IDs in UI&#10;&#10;- Add input fields for Huawei App ID, Google Client ID, and Google Drive Folder ID to `activity_main.xml`&#10;- Update `TokenManager` to persist and retrieve these IDs from SharedPreferences, using `BuildConfig` values as fallbacks&#10;- Update `MainActivity` to handle user input for these IDs and validate them before initiating OAuth flows&#10;- Modify `GoogleDriveRepository` to use the dynamic `googleDriveFolderId` from `TokenManager` instead of a static constant&#10;- Update `GoogleAuthActivity` with better comments regarding WebView limitations and minor UI/parameter adjustments&#10;- Adjust Android project configuration files and update `AndroidManifest.xml` to use `@drawable/ic_launcher`&#10;- Update `local.properties.example` with a sample Huawei App ID" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: allow dynamic configuration of Huawei and Google IDs in UI&#10;&#10;- Add input fields for Huawei App ID, Google Client ID, and Google Drive Folder ID to `activity_main.xml`&#10;- Update `TokenManager` to persist and retrieve these IDs from SharedPreferences, using `BuildConfig` values as fallbacks&#10;- Update `MainActivity` to handle user input for these IDs and validate them before initiating OAuth flows&#10;- Modify `GoogleDriveRepository` to use the dynamic `googleDriveFolderId` from `TokenManager` instead of a static constant&#10;- Update `GoogleAuthActivity` with better comments regarding WebView limitations and minor UI/parameter adjustments&#10;- Adjust Android project configuration files and update `AndroidManifest.xml` to use `@drawable/ic_launcher`&#10;- Update `local.properties.example` with a sample Huawei App ID" />
   </component>
   <component name="play_dynamic_filters_status">
     <option name="appIdToCheckInfo">
       <map>
         <entry key="ru.tafinceva.health">
           <value>
-            <CheckInfo lastCheckTimestamp="1774616452084" />
+            <CheckInfo lastCheckTimestamp="1774854363281" />
           </value>
         </entry>
         <entry key="ru.tafinceva.health.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1774616452083" />
+            <CheckInfo lastCheckTimestamp="1774854363277" />
           </value>
         </entry>
       </map>
