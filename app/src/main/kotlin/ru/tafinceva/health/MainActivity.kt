@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -29,42 +30,47 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var tokenManager: TokenManager
     private lateinit var huaweiRepository: HuaweiRepository
-
-    // ── Notification permission (Android 13+) ─────────────────
+    private lateinit var googleDriveRepository: GoogleDriveRepository
 
     private val notifPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* permission result handled silently */ }
+    ) { }
 
-    // ── BroadcastReceiver for Huawei OAuth code ───────────────
-
-    private val authReceiver = object : BroadcastReceiver() {
+    private val huaweiAuthReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val code  = intent.getStringExtra(AuthWebViewActivity.EXTRA_CODE)
             val error = intent.getStringExtra(AuthWebViewActivity.EXTRA_ERROR)
-
             when {
-                code != null  -> onHuaweiCodeReceived(code)
-                error != null -> showStatus("Ошибка авторизации: $error")
+                code  != null -> onHuaweiCodeReceived(code)
+                error != null -> showStatus("Ошибка Huawei: $error")
             }
         }
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────
+    private val googleAuthReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val code  = intent.getStringExtra(GoogleAuthActivity.EXTRA_CODE)
+            val error = intent.getStringExtra(GoogleAuthActivity.EXTRA_ERROR)
+            when {
+                code  != null -> onGoogleCodeReceived(code)
+                error != null -> showStatus("Ошибка Google: $error")
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        tokenManager     = TokenManager(this)
-        huaweiRepository = HuaweiRepository(tokenManager)
+        tokenManager         = TokenManager(this)
+        huaweiRepository     = HuaweiRepository(tokenManager)
+        googleDriveRepository = GoogleDriveRepository(tokenManager)
 
         requestNotificationPermission()
         setupUi()
         updateLastSyncLabel()
 
-        // Observe background sync work state
         WorkManager.getInstance(this)
             .getWorkInfosForUniqueWorkLiveData(SyncWorker.WORK_NAME)
             .observe(this) { infos ->
@@ -76,86 +82,96 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        val filter = IntentFilter(AuthWebViewActivity.ACTION_AUTH_CODE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(authReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(authReceiver, filter)
-        }
+        registerAuthReceiver(huaweiAuthReceiver, AuthWebViewActivity.ACTION_AUTH_CODE)
+        registerAuthReceiver(googleAuthReceiver, GoogleAuthActivity.ACTION_GOOGLE_AUTH_CODE)
     }
 
     override fun onStop() {
         super.onStop()
-        unregisterReceiver(authReceiver)
+        unregisterReceiver(huaweiAuthReceiver)
+        unregisterReceiver(googleAuthReceiver)
     }
 
-    // ── UI setup ──────────────────────────────────────────────
-
     private fun setupUi() {
-        // Pre-fill Google refresh token if already stored
-        binding.etGoogleToken.setText(tokenManager.googleRefreshToken ?: "")
+        updateGoogleAuthStatus()
+
+        // Load existing values
+        binding.etHuaweiId.setText(tokenManager.huaweiAppId)
+        binding.etGoogleId.setText(tokenManager.googleClientId)
+        binding.etFolderId.setText(tokenManager.googleDriveFolderId)
+
+        // Save on change
+        binding.etHuaweiId.doAfterTextChanged { tokenManager.huaweiAppId = it?.toString()?.trim() }
+        binding.etGoogleId.doAfterTextChanged { tokenManager.googleClientId = it?.toString()?.trim() }
+        binding.etFolderId.doAfterTextChanged { tokenManager.googleDriveFolderId = it?.toString()?.trim() }
 
         binding.btnHuaweiLogin.setOnClickListener {
+            if (tokenManager.huaweiAppId.isNullOrEmpty()) {
+                Toast.makeText(this, "Введите Huawei App ID", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             startActivity(Intent(this, AuthWebViewActivity::class.java))
         }
 
-        binding.btnSaveGoogleToken.setOnClickListener {
-            val token = binding.etGoogleToken.text.toString().trim()
-            if (token.isEmpty()) {
-                Toast.makeText(this, "Введите Google refresh token", Toast.LENGTH_SHORT).show()
+        binding.btnGoogleLogin.setOnClickListener {
+            if (tokenManager.googleClientId.isNullOrEmpty()) {
+                Toast.makeText(this, "Введите Google Client ID", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            tokenManager.googleRefreshToken = token
-            SyncScheduler.schedule(this)
-            showStatus("Google token сохранён. Фоновая синхронизация активирована.")
+            startActivity(Intent(this, GoogleAuthActivity::class.java))
         }
 
         binding.btnSyncNow.setOnClickListener {
-            val googleToken = binding.etGoogleToken.text.toString().trim()
-            if (googleToken.isNotEmpty()) {
-                tokenManager.googleRefreshToken = googleToken
-            }
-
             if (!tokenManager.isConfigured) {
-                Toast.makeText(
-                    this,
-                    "Сначала войдите через Huawei и сохраните Google token",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this, "Настройте ID и пройдите авторизацию", Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
-
             SyncScheduler.runNow(this)
             showStatus("Запущена синхронизация…")
         }
     }
 
-    // ── Huawei OAuth callback ─────────────────────────────────
-
     private fun onHuaweiCodeReceived(code: String) {
         binding.progressBar.visibility = View.VISIBLE
-        showStatus("Получен код авторизации, обмен на токен…")
-
+        showStatus("Huawei: обмен кода…")
         lifecycleScope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    huaweiRepository.exchangeCode(code)
-                }
-                showStatus("Huawei авторизация успешна!")
-                binding.btnSyncNow.isEnabled = true
-                if (tokenManager.isConfigured) {
-                    SyncScheduler.schedule(this@MainActivity)
-                }
+                withContext(Dispatchers.IO) { huaweiRepository.exchangeCode(code) }
+                showStatus("Huawei ОК!")
+                maybeScheduleSync()
             } catch (e: Exception) {
-                showStatus("Ошибка обмена токена: ${e.localizedMessage}")
+                showStatus("Ошибка Huawei: ${e.localizedMessage}")
             } finally {
                 binding.progressBar.visibility = View.GONE
             }
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────
+    private fun onGoogleCodeReceived(code: String) {
+        binding.progressBar.visibility = View.VISIBLE
+        showStatus("Google: обмен кода…")
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) { googleDriveRepository.exchangeCode(code) }
+                showStatus("Google ОК!")
+                updateGoogleAuthStatus()
+                maybeScheduleSync()
+            } catch (e: Exception) {
+                showStatus("Ошибка Google: ${e.localizedMessage}")
+            } finally {
+                binding.progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun maybeScheduleSync() {
+        if (tokenManager.isConfigured) SyncScheduler.schedule(this)
+    }
+
+    private fun updateGoogleAuthStatus() {
+        val authorized = !tokenManager.googleRefreshToken.isNullOrEmpty()
+        binding.btnGoogleLogin.text = if (authorized) "Google: авторизован ✓" else "Войти через Google"
+    }
 
     private fun showStatus(message: String) {
         binding.tvStatus.text = message
@@ -166,24 +182,24 @@ class MainActivity : AppCompatActivity() {
         if (last == 0L) {
             binding.tvLastSync.text = "Последняя синхронизация: никогда"
         } else {
-            val formatted = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-                .format(Date(last))
+            val formatted = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(last))
             binding.tvLastSync.text = "Последняя синхронизация: $formatted"
         }
+    }
 
-        // Refresh label whenever WorkManager finishes
-        WorkManager.getInstance(this)
-            .getWorkInfosForUniqueWorkLiveData(SyncWorker.WORK_NAME)
-            .observe(this) { infos ->
-                val anySucceeded = infos.any { it.state == WorkInfo.State.SUCCEEDED }
-                if (anySucceeded) updateLastSyncLabel()
-            }
+    private fun registerAuthReceiver(receiver: BroadcastReceiver, action: String) {
+        val filter = IntentFilter(action)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(receiver, filter)
+        }
     }
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-            != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }

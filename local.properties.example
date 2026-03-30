@@ -2,7 +2,7 @@
 # local.properties НЕ коммитится в git.
 
 # Huawei AppGallery Connect → App Information
-HUAWEI_APP_ID=ваш_app_id
+HUAWEI_APP_ID=117241765
 HUAWEI_APP_SECRET=ваш_app_secret
 
 # Google Cloud Console → OAuth 2.0 Client ID (Android)
